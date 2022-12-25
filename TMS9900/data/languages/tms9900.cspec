@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<compiler_spec>
+  <global>
+    <range space="RAM"/>
+  </global>
+  <data_organization>
+	<pointer_size value="2" />
+  </data_organization>
+  <default_proto>
+    <prototype name="__stdcall" extrapop="2" stackshift="0">
+      <input>
+        <pentry minsize="1" maxsize="2">
+          <register name="WP"/>
+        </pentry>
+      </input>
+      <output>
+        <pentry minsize="1" maxsize="2">
+          <register name="WP"/>
+        </pentry>
+      </output>
+    </prototype>
+  </default_proto>
+</compiler_spec>
