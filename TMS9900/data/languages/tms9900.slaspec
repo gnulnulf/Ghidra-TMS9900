@@ -182,19 +182,19 @@ SREG: "*"reg_src is reg_src & reg_ts=1
 } 
 
 # Workspace register indirect increment
-SREG: "*"^reg_src^"+" is reg_src & reg_ts=3 
+SREG: "*"^reg_src^"+" is reg_src & reg_ts=3  & reg_nr!=-1
 { 
 	local tmp:2 = WP + 2 * reg_src;
 	local tmp2:2 = *:2 tmp;
-    export *:2 tmp2;#
-#	*tmp2 = *tmp2+1;
+    export *:2 tmp2;
 #	
 } 
 	
 # symbolic is only for R0
 SREG: "SYM@>"imm16 is reg_src & reg_ts=2 & reg_nr=0 ;imm16
 {
-	export imm16;
+	local tmp2:2 = imm16;
+	export tmp2;
 }
 
 # R1-R15 is indexed
@@ -235,13 +235,15 @@ DREG: "*"^reg_dst^"+" is reg_dst & reg_td=3
 # symbolic is only for R0 #FIXME reg_ts=2
 DREG: "@>"imm216 is reg_dst & reg_td=2 & reg_ts!=2 & reg_dnr=0 ;imm216
 {
-	export imm216;
+	local tmp2:2 = imm216;
+	export tmp2;
 }
 
 # symbolic is only for R0
 DREG: "@>"imm216 is reg_dst & reg_td=2  & reg_ts=2  & reg_dnr=0 ;imm16;imm216
 {
-	export imm216;
+	local tmp2:2 = imm216;
+	export tmp2;
 
 }
 
@@ -611,6 +613,3 @@ DREG: "@"simm16"("reg_dst")" is reg_dst & reg_td=2 & reg_ts=2 & reg_dnr!=0 ;imm1
 {
 
 }
-
-
-
