@@ -25,7 +25,7 @@ jobs:
           auth_token: ${{ secrets.GITHUB_TOKEN }}
           version: ${{ matrix.ghidra }}
       - name: Build
-        run: chmod +x gradlew && ./gradlew test buildExtension -PGHIDRA_INSTALL_DIR=${{ env.GHIDRA_INSTALL_DIR }}
+        run: /bin/sh ./gradlew test buildExtension -PGHIDRA_INSTALL_DIR=${{ env.GHIDRA_INSTALL_DIR }}
       - uses: actions/upload-artifact@v4
         with:
           name: GhidraTMS9900_Ghidra_${{ matrix.ghidra }}
