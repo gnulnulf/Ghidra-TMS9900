@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- See Relax specification: Ghidra/Framework/SoftwareModeling/data/languages/processor_spec.rxg -->
+
+<processor_spec>
+  <programcounter register="PC"/>
+  <register_data>
+    <register name="WP_" group="Alt"/>
+  </register_data>
+  <default_symbols>
+    <symbol name="RESET_WP" address="0x0000" type="code_ptr" entry="false" />
+    <symbol name="RESET_PC" address="0x0002" entry="true" />
+    <symbol name="LEVEL1_INT_WP" address="0x0004" type="code_ptr" entry="false" />
+    <symbol name="LEVEL1_INT_PC" address="0x0006" type="code_ptr" entry="false" />
+    <symbol name="LEVEL2_INT_WP" address="0x0008" type="code_ptr" entry="false" />
+    <symbol name="LEVEL2_INT_PC" address="0x000a" type="code_ptr" entry="false" />
+    <symbol name="LEVEL3_INT_WP" address="0x000c" type="code_ptr" entry="false" />
+    <symbol name="LEVEL3_INT_PC" address="0x000e" type="code_ptr" entry="false" />
+    <symbol name="LEVEL4_INT_WP" address="0x0010" type="code_ptr" entry="false" />
+    <symbol name="LEVEL4_INT_PC" address="0x0012" type="code_ptr" entry="false" />
+    <symbol name="LEVEL5_INT_WP" address="0x0014" type="code_ptr" entry="false" />
+    <symbol name="LEVEL5_INT_PC" address="0x0016" type="code_ptr" entry="false" />
+    <symbol name="LEVEL6_INT_WP" address="0x0018" type="code_ptr" entry="false" />
+    <symbol name="LEVEL6_INT_PC" address="0x001a" type="code_ptr" entry="false" />
+    <symbol name="LEVEL7_INT_WP" address="0x001c" type="code_ptr" entry="false" />
+    <symbol name="LEVEL7_INT_PC" address="0x001e" type="code_ptr" entry="false" />
+    <symbol name="LEVEL8_INT_WP" address="0x0020" type="code_ptr" entry="false" />
+    <symbol name="LEVEL8_INT_PC" address="0x0022" type="code_ptr" entry="false" />
+    <symbol name="LEVEL9_INT_WP" address="0x0024" type="code_ptr" entry="false" />
+    <symbol name="LEVEL9_INT_PC" address="0x0026" type="code_ptr" entry="false" />
+    <symbol name="LEVEL10_INT_WP" address="0x0028" entry="false" />
+    <symbol name="LEVEL10_INT_PC" address="0x002a" entry="false" />
+    <symbol name="LEVEL11_INT_WP" address="0x002c" type="code_ptr" entry="false" />
+    <symbol name="LEVEL11_INT_PC" address="0x002e" type="code_ptr" entry="false" />
+    <symbol name="LEVEL12_INT_WP" address="0x0030" type="code_ptr" entry="false" />
+    <symbol name="LEVEL12_INT_PC" address="0x0032" type="code_ptr" entry="false" />
+    <symbol name="LEVEL13_INT_WP" address="0x0034" type="code_ptr" entry="false" />
+    <symbol name="LEVEL13_INT_PC" address="0x0036" type="code_ptr" entry="false" />
+    <symbol name="LEVEL14_INT_WP" address="0x0038" type="code_ptr" entry="false" />
+    <symbol name="LEVEL14_INT_PC" address="0x003a" type="code_ptr" entry="false" />
+    <symbol name="LEVEL15_INT_WP" address="0x003c" type="code_ptr" entry="false" />
+    <symbol name="LEVEL15_INT_PC" address="0x003e" type="code_ptr" entry="false" />
+    <symbol name="XOP0_INT_WP" address="0x0040" type="code_ptr" entry="false" />
+    <symbol name="XOP0_INT_PC" address="0x0042" type="code_ptr" entry="false" />
+    <symbol name="XOP1_INT_WP" address="0x0044" type="code_ptr" entry="false" />
+    <symbol name="XOP1_INT_PC" address="0x0046" type="code_ptr" entry="false" />
+    <symbol name="XOP2_INT_WP" address="0x0048" type="code_ptr" entry="false" />
+    <symbol name="XOP2_INT_PC" address="0x004a" type="code_ptr" entry="false" />
+    <symbol name="XOP3_INT_WP" address="0x004c" type="code_ptr" entry="false" />
+    <symbol name="XOP3_INT_PC" address="0x004e" type="code_ptr" entry="false" />
+    <symbol name="XOP4_INT_WP" address="0x0050" type="code_ptr" entry="false" />
+    <symbol name="XOP4_INT_PC" address="0x0052" type="code_ptr" entry="false" />
+    <symbol name="XOP5_INT_WP" address="0x0054" type="code_ptr" entry="false" />
+    <symbol name="XOP5_INT_PC" address="0x0056" type="code_ptr" entry="false" />
+    <symbol name="XOP6_INT_WP" address="0x0058" type="code_ptr" entry="false" />
+    <symbol name="XOP6_INT_PC" address="0x005a" type="code_ptr" entry="false" />
+    <symbol name="XOP7_INT_WP" address="0x005c" type="code_ptr" entry="false" />
+    <symbol name="XOP7_INT_PC" address="0x005e" type="code_ptr" entry="false" />
+    <symbol name="XOP8_INT_WP" address="0x0060" type="code_ptr" entry="false" />
+    <symbol name="XOP8_INT_PC" address="0x0062" type="code_ptr" entry="false" />
+    <symbol name="XOP9_INT_WP" address="0x0064" type="code_ptr" entry="false" />
+    <symbol name="XOP9_INT_PC" address="0x0066" type="code_ptr" entry="false" />
+    <symbol name="XOP10_INT_WP" address="0x0068" type="code_ptr" entry="false" />
+    <symbol name="XOP10_INT_PC" address="0x006a" type="code_ptr" entry="false" />
+    <symbol name="XOP11_INT_WP" address="0x006c" type="code_ptr" entry="false" />
+    <symbol name="XOP11_INT_PC" address="0x006e" type="code_ptr" entry="false" />
+    <symbol name="XOP12_INT_WP" address="0x0070" type="code_ptr" entry="false" />
+    <symbol name="XOP12_INT_PC" address="0x0072" type="code_ptr" entry="false" />
+    <symbol name="XOP13_INT_WP" address="0x0074" type="code_ptr" entry="false" />
+    <symbol name="XOP13_INT_PC" address="0x0076" type="code_ptr" entry="false" />
+    <symbol name="XOP14_INT_WP" address="0x0078" type="code_ptr" entry="false" />
+    <symbol name="XOP14_INT_PC" address="0x007a" type="code_ptr" entry="false" />
+    <symbol name="XOP15_INT_WP" address="0x007c" type="code_ptr" entry="false" />
+    <symbol name="XOP15_INT_PC" address="0x007e" type="code_ptr" entry="false" />
+  </default_symbols>
+  <default_memory_blocks>
+    <memory_block name="INT" start_address="0" length="0x80" initialized="false" />
+    <memory_block name="GENERAL_RAM" start_address="0x80" length="0xf77e" initialized="false" />
+    <memory_block name="STACK" start_address="0xffff" length="0x1ff" initialized="false" />
+    
+  </default_memory_blocks>
+  
+</processor_spec>

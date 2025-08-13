@@ -1,0 +1,652 @@
+# sleigh specification file for TI TMS9900
+
+define endian=big;
+define alignment=2;
+
+define space RAM     type=ram_space      size=2  default;
+define space register type=register_space size=2;
+#define space CRU     type=ram_space      size=2  default;
+
+# 16-bit registers:
+#    PC: Program counter
+#    WP: Workspace address
+#    ST: Status register
+define register offset=16 size=2 [ PC WP ST ];
+#define register offset=16 size=2 [ r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15 PC WP ST ];
+
+
+# define status bits: 
+@define LGT "ST[15,1]" # Logical greater than
+@define ST0 "ST[15,1]" # Logical greater than
+@define AGT "ST[14,1]" # Arithmetic greater than
+@define ST1 "ST[14,1]" # Arithmetic greater than
+@define EQ "ST[13,1]"  # Equal
+@define ST2 "ST[13,1]"  # Equal
+@define C "ST[12,1]"   # Carry
+@define ST3 "ST[12,1]"   # Carry
+@define O "ST[11,1]"   # Overflow
+@define ST4 "ST[11,1]"   # Overflow
+@define P "ST[10,1]"   # Parity
+@define ST5 "ST[10,1]"   # Parity
+@define XOP "ST[9,1]" # XOP instruction executed
+@define ST6 "ST[9,1]" # XOP instruction executed
+#5-8 unused
+@define IM "ST[0,4]" # Interrupt mask
+
+define token data8 (8)
+    imm8      = (0,7)
+    simm8     = (0,7) signed
+;
+
+define token data (16)
+    imm16     = (0,15)
+	simm16 = (0,15) signed dec
+;
+define token data2 (16)
+    imm216     = (0,15)
+	simm216 = (0,15) signed dec
+;
+# bit 0=MSB in TMS9900, 15 in ghidra
+#00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15
+#15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00
+
+# operand
+define token operand (16)
+    op3  = (13,15)
+	op6  = (10,15)
+	op8  = (8,15)
+    op10  = (6,15)
+    op11  = (5,15)
+
+    doi_b   = (12,12)
+
+    mode_b   = (12,12)
+    reg_td  = (10,11)
+    reg_dst = (6,9) dec
+    reg_dnr = (6,9) 
+    xop_dst = (6,9) dec
+	reg_ts  = (4,5)
+	reg_src = (0,3) dec
+	reg_nr = (0,3) 
+
+    crum_op  = (10,15)
+    crum_c = (6,9)
+	crum_ts  = (4,5)
+	crum_src = (0,3) dec
+
+;
+	
+
+
+# dual operand instructions source/reg
+define token doir (16)
+    doir_op  = (10,15)
+#   doir_dst = (6,9) dec
+#	doir_ts  = (4,5)
+#	doir_src = (0,3) dec
+;
+
+# XOP
+#define token xop (16)
+#    xop_op  = (10,15)
+#    xop_dst = (6,9) dec
+#	xop_ts  = (4,5)
+#	xop_src = (0,3) dec
+#;
+
+
+# single operand instructions 
+#define token sop (16)
+    #op10  = (6,15)
+#	reg_ts  = (4,5)
+#	reg_src = (0,3) dec
+#;
+
+
+
+# CRU Multi
+define token crum (16)
+#    crum_op  = (10,15)
+#    crum_c = (6,9)
+#	crum_ts  = (4,5)
+#	crum_src = (0,3) dec
+;
+
+# CRU Single
+define token crus (16)
+    crus_op  = (8,15)
+    crus_sdis = (0,7) signed
+;
+
+# JMP
+define token jmp (16)
+    jmp_op  = (8,15)
+    jmp_sdis = (0,7) signed
+;
+
+
+#SHIFT
+define token shift (16)
+	shift_op  = (8,15)
+	shift_count = (4,7)
+	shift_reg = (0,3)
+;
+#imm
+define token iri (16)
+    iri_op  = (5,15)
+	iri_n_  = (4,4)
+	iri_reg = (0,3) dec
+;
+
+
+#load
+define token load (16)
+    load_op  = (5,15)
+    load_n = (0,4)
+;
+#store
+
+# rtwp
+
+#external
+
+
+
+
+# bind regnr to reglist
+attach names [ reg_dst reg_src iri_reg shift_reg] [
+r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15 ];
+
+#attach variables acc_4 [ A B ];
+
+################################################################
+# Constructors
+################################################################
+
+REL:  addr    is jmp_sdis  [ addr = inst_next + ( jmp_sdis *2 );  ]   { export *:2 addr; }
+
+# register source addressing
+# Workspace register
+SREG: reg_src is reg_src & reg_ts=0  
+{ 
+	local tmp:2 = WP + 2 * reg_src;
+    export *:2 tmp;
+} 
+
+# Workspace register indirect
+SREG: "*"reg_src is reg_src & reg_ts=1
+{ 
+	local tmp:2 = WP + 2 * reg_src;
+	local tmp2:2 = *:2 tmp;
+    export *:2 tmp2;
+} 
+
+# Workspace register indirect increment
+SREG: "*"^reg_src^"+" is reg_src & reg_ts=3  & reg_nr!=-1
+{ 
+	local tmp:2 = WP + 2 * reg_src;
+	local tmp2:2 = *:2 tmp;
+    export *:2 tmp2;
+#	
+} 
+	
+# symbolic is only for R0
+SREG: "SYM@>"imm16 is reg_src & reg_ts=2 & reg_nr=0 ;imm16
+{
+	local tmp2:2 = imm16;
+	export tmp2;
+}
+
+# R1-R15 is indexed
+SREG: "@"simm16"("reg_src")" is reg_src & reg_ts=2 & reg_nr!=0 ;simm16
+{  
+	local tmp:2 = WP + 2 * reg_src ;
+	local tmp2:2 = *:2 tmp+simm16;
+    export *:2 tmp2;#
+}
+
+
+# register destination addressing
+# Workspace register
+DREG: reg_dst is reg_dst & reg_td=0  
+{ 
+	local tmp:2 = WP + 2 * reg_dst;
+    export *:2 tmp;
+} 
+
+# Workspace register indirect
+DREG: "*"reg_dst is reg_dst & reg_td=1
+{ 
+	local tmp:2 = WP + 2 * reg_dst;
+	local tmp2:2 = *:2 tmp;
+    export *:2 tmp2;
+} 
+
+# Workspace register indirect increment
+DREG: "*"^reg_dst^"+" is reg_dst & reg_td=3 
+{ 
+	local tmp:2 = WP + 2 * reg_dst;
+	local tmp2:2 = *:2 tmp;
+    export *:2 tmp2;#
+#	*tmp2 = *tmp2+1;
+#	
+} 
+	
+# symbolic is only for R0 #FIXME reg_ts=2
+DREG: "@>"imm216 is reg_dst & reg_td=2 & reg_ts!=2 & reg_dnr=0 ;imm216
+{
+	local tmp2:2 = imm216;
+	export tmp2;
+}
+
+# symbolic is only for R0
+DREG: "@>"imm216 is reg_dst & reg_td=2  & reg_ts=2  & reg_dnr=0 ;imm16;imm216
+{
+	local tmp2:2 = imm216;
+	export tmp2;
+
+}
+
+
+# R1-R15 is indexed
+DREG: "@"simm16"("reg_dst")" is reg_dst & reg_td=2 & reg_ts!=2 & reg_dnr!=0 ;simm16
+{
+	local tmp:2 = WP + 2 * reg_dst ;
+	local tmp2:2 = *:2 tmp+simm16;
+    export *:2 tmp2;#
+}
+
+DREG: "@"simm16"("reg_dst")" is reg_dst & reg_td=2 & reg_ts=2 & reg_dnr!=0 ;imm16;simm16
+{
+	local tmp:2 = WP + 2 * reg_dst ;
+	local tmp2:2 = *:2 tmp+simm16;
+    export *:2 tmp2;#
+}
+
+
+
+################################################################
+# Macros
+################################################################
+
+################################################################
+# Instructions
+################################################################
+
+# 3.5.1
+:A SREG","^DREG is ( op3=0x5 & mode_b=0 ) ... & SREG ... & DREG
+{
+
+}
+
+:AB SREG","^DREG is ( op3=0x5 & mode_b=1 ) ... & SREG ... & DREG
+{
+
+}
+
+:C SREG","^DREG is ( op3=0x4 & mode_b=0) ... & SREG ... & DREG
+{
+
+}
+
+:CB SREG","^DREG is ( op3=0x4 & mode_b=1 )  ... & SREG ... & DREG
+{
+
+}
+
+:S SREG","^DREG is ( op3=0x3 & mode_b=0 ) ... & SREG ... & DREG
+{
+
+}
+
+:SB SREG","^DREG is ( op3=0x3 & mode_b=1 ) ... & SREG ... & DREG
+{
+
+}
+
+:SOC SREG","^DREG is ( op3=0x7 & mode_b=0 ) ... & SREG ... & DREG
+{
+
+}
+
+:SOCB SREG","^DREG is ( op3=0x7 & mode_b=1 ) ... & SREG ... & DREG
+{
+
+}
+
+:SZC SREG","^DREG is ( op3=0x2 & mode_b=0)  ... & SREG ... & DREG
+{
+
+}
+
+:SZCB SREG","^DREG is ( op3=0x2 & mode_b=1 )  ... & SREG ... & DREG
+{
+
+}
+
+:MOV SREG","^DREG is ( op3=0x6 & mode_b=0 ) ... & SREG ... & DREG
+{
+SREG=DREG;
+}
+
+
+:MOVB SREG^","^DREG is ( op3=0x6 & mode_b=1) ... & SREG ... & DREG
+{
+SREG=DREG;
+}
+# 3.5.2
+:COC SREG","^reg_dst is ( op6=0x8 & reg_dst ) ... & SREG 
+{
+
+}
+
+:CZC SREG","^reg_dst is ( op6=0x9 & reg_dst ) ... & SREG 
+{
+
+}
+
+:XOR SREG","^reg_dst is ( op6=0xa & reg_dst ) ... & SREG 
+{
+
+}
+
+:MPY SREG","^reg_dst is ( op6=0xe & reg_dst ) ... & SREG 
+{
+
+}
+
+:DIV SREG","^reg_dst is ( op6=0xf & reg_dst ) ... & SREG 
+{
+
+}
+
+# xop(reg,index)
+define pcodeop xop;
+
+macro mxop(reg,wpvec,pcvec){
+
+}
+
+# 3.5.3
+:XOP SREG^","^reg_dnr is ( op6=0xb & reg_dnr  ) ...  & SREG 
+{
+  # Pseudocode:
+  #   R13_new <- R13_current
+  #   R14_new <- R14_current
+  #   R15_new <- R15_current
+  #   R11_new <- effective address of src
+  #   PC,WP loaded from jump table at >0040 + 4*opnum
+  #   Mask set, bit 6 in Status Register set
+	local tmpwp:2 = 0x40 + 4* reg_dnr;
+	local tmppc:2 = 0x42 + 4* reg_dnr;
+	local tmpwp2:2=*tmpwp;
+	local tmppc2:2=*tmppc;
+	local newwp:2=*tmpwp;
+	local newpc:2=*tmppc;
+	xop(SREG,newwp,newpc);
+	PC=newpc;
+	#call newpc;
+
+
+
+#	local oldwp:2 = WP;
+# 	local newwp:2 = 40 + 4* reg_dnr;
+# 	local newpc:2 = 42 + 4* reg_dnr;
+# 	WP=newwp;
+# 	#r13=oldWP
+# 	#r14=oldPC
+# 	#r15=oldST
+#	call[newpc];
+#/   #export *:2 tmp2;
+}
+
+#:XOP ">@"imm16^","^reg_dst is ( op6=0xb & reg_dst & reg_ts=0 ) ...  & SREG ;imm16
+#{#
+#
+#}
+
+
+# 3.5.4
+:B SREG is op10=0x11 ... & SREG 
+{
+	goto SREG;
+
+}
+:BL SREG is op10=0x1a ... & SREG 
+{
+
+}
+:BLWP SREG is op10=0x10 ... & SREG 
+{
+
+}
+:CLR SREG is op10=0x13 ... & SREG 
+{
+ SREG=0;
+}
+:SETO SREG is op10=0x1c ... & SREG 
+{
+
+}
+:INV SREG is op10=0x15 ... & SREG 
+{
+
+}
+:NEG SREG is op10=0x14 ... & SREG 
+{
+
+}
+:ABS SREG is op10=0x1d ... & SREG 
+{
+
+}
+:SWPB SREG is op10=0x1b ... & SREG 
+{
+
+}
+:INC SREG is op10=0x16 ... & SREG 
+{
+
+}
+:INCT SREG is op10=0x17 ... & SREG 
+{
+
+}
+:DEC SREG is op10=0x18 ... & SREG 
+{
+
+}
+:DECT SREG is op10=0x19 ... & SREG 
+{
+
+}
+:X SREG is op10=0x12 ... & SREG 
+{
+
+}
+
+
+
+# 3.5.5 CRU multi
+:LDCR SREG^","^crum_c is ( crum_op=0xc & crum_c ) ... & SREG 
+{
+
+}
+:STCR SREG^","^crum_c is ( crum_op=0xd & crum_c ) ... & SREG 
+{
+
+}
+
+# 3.5.6 CRU single bit
+:SBO crus_sdis is crus_op=0x1d & crus_sdis
+{
+
+}
+:SBZ crus_sdis is crus_op=0x1e & crus_sdis
+{
+
+}
+:TB crus_sdis is crus_op=0x1f & crus_sdis
+{
+
+}
+
+# 3.5.7
+:JEQ ">"^REL is jmp_op=0x13 & REL 
+{
+ if ($(ST2) == 1) goto REL;
+}
+
+:JGT ">"^REL is jmp_op=0x15 & REL 
+{
+ if ($(ST1) == 1) goto REL;
+}
+
+:JH ">"^REL is jmp_op=0x1b & REL 
+{
+ if (($(ST0) == 1) && ($(ST2) == 0) ) goto REL;
+}
+:JHE ">"^REL is jmp_op=0x14 & REL 
+{
+ if (($(ST0) == 1) && ($(ST2) == 1) ) goto REL;
+}
+:JL ">"^REL is jmp_op=0x1a & REL 
+{
+ if (($(ST0) == 0) && ($(ST2) == 0) ) goto REL;
+}
+:JLE ">"^REL is jmp_op=0x12 & REL 
+{
+ if (($(ST0) == 0) && ($(ST2) == 1) ) goto REL;
+}
+:JLT ">"^REL is jmp_op=0x11 & REL 
+{
+ if (($(ST1) == 0) && ($(ST2) == 0) ) goto REL;
+}
+:JMP ">"^REL is jmp_op=0x10 & REL 
+{
+ goto REL;
+}
+:JNC ">"^REL is jmp_op=0x17 & REL 
+{
+ if ($(ST3) == 0) goto REL;
+}
+:JNE ">"^REL is jmp_op=0x16 & REL 
+{
+ if ($(ST2) == 0) goto REL;
+}
+:JNO ">"^REL is jmp_op=0x19 & REL 
+{
+ if ($(ST4) == 0) goto REL;
+}
+:JOC ">"^REL is jmp_op=0x18 & REL 
+{
+ if ($(ST3) == 1) goto REL;
+}
+:JOP ">"^REL is jmp_op=0x1c & REL 
+{
+ if ($(ST5) == 1) goto REL;
+}
+
+
+
+
+
+
+# 3.5.8
+:SLA shift_reg^","^shift_count is shift_op=0x0a  & shift_reg & shift_count
+{
+
+}
+:SRA shift_reg^","^shift_count is shift_op=0x08  & shift_reg & shift_count
+{
+
+}
+:SRC shift_reg^","^shift_count is shift_op=0x0b  & shift_reg & shift_count
+{
+
+}
+:SRL shift_reg^","^shift_count is shift_op=0x09  & shift_reg & shift_count
+{
+
+}
+# 3.5.9 Immediate register instructions
+:AI iri_reg^",>"^imm16 is  iri_op=0x11 & iri_reg; imm16
+{
+	
+}
+
+:ANDI iri_reg^",>"^imm16 is  iri_op=0x12 & iri_reg; imm16
+{
+	
+}
+
+:CI iri_reg^",>"^imm16 is  iri_op=0x14 & iri_reg; imm16
+{
+	
+}
+
+:LI iri_reg^",>"^imm16 is  iri_op=0x10 & iri_reg; imm16
+{
+	
+}
+
+:ORI iri_reg^",>"^imm16 is  iri_op=0x13 & iri_reg; imm16
+{
+	
+}
+
+# 3.5.10 internal register load immediate
+define pcodeop lwpi_set_wp;
+
+:LWPI ">"^imm16 is load_op=0x17; imm16
+{
+  WP=imm16;
+}
+
+define pcodeop limi_load_interrupt_mask;
+
+:LIMI ">"^imm16 is load_op=0x18; imm16
+{
+	local tmp:2=imm16;
+	limi_load_interrupt_mask(tmp);
+}
+
+# 3.5.11 internal register store
+:STST reg_dst is op11=0x16  & reg_dst
+{
+
+}
+:STWP reg_dst is op11=0x15  & reg_dst
+{
+
+}
+
+# 3.5.12
+:RTWP is op11=0x1c
+{
+
+}
+
+
+
+# 3.5.13
+:IDLE is op11=0x1a
+{
+
+}
+:RSET is op11=0x1b
+{
+
+}
+:CKOF is op11=0x1e
+{
+
+}
+:CKON is op11=0x1d
+{
+
+}
+:LREX is op11=0x1f
+{
+
+}
