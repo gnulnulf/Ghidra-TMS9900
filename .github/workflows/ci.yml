@@ -29,7 +29,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: GhidraTMS9900_Ghidra_${{ matrix.ghidra }}
-          path: dist/*_GhidraT-MS9900.zip
+          path: dist/*_Ghidra-TMS9900.zip
           if-no-files-found: 'error'
   release:
     if: github.ref_type == 'tag'
