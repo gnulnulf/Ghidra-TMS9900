@@ -9,9 +9,9 @@ jobs:
       matrix:
         ghidra:
           - "11.4"
-          - "11.3.2"
-          - "11.2.1"
-          - "11.1.2"
+#          - "11.3.2"
+#          - "11.2.1"
+#          - "11.1.2"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -20,12 +20,12 @@ jobs:
           java-version: '21'
           cache: 'gradle'
       - name: Install Ghidra ${{ matrix.ghidra }}
-        uses: antoniovazquezblanco/setup-ghidra@v2.0.3
+        uses: antoniovazquezblanco/setup-ghidra@v2.0.12
         with:
           auth_token: ${{ secrets.GITHUB_TOKEN }}
           version: ${{ matrix.ghidra }}
       - name: Build
-        run: /bin/sh ./gradlew test buildExtension -PGHIDRA_INSTALL_DIR=${{ env.GHIDRA_INSTALL_DIR }}
+        run: gradle test buildExtension -PGHIDRA_INSTALL_DIR=${{ env.GHIDRA_INSTALL_DIR }}
       - uses: actions/upload-artifact@v4
         with:
           name: GhidraTMS9900_Ghidra_${{ matrix.ghidra }}
