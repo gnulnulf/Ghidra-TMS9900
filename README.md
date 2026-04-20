@@ -1,8 +1,8 @@
 # Ghidra-TMS9900
 
-Place the TMS9900 directory in your ghidra/processors directory.
-
 Implements complete TMS9900 16-bit processor disassembly for Ghidra.
+
+Install as a plugin using ghidra menu options
 
 Instruction set coverage:
 - Immediate operand:   LI, AI, ANDI, ORI, CI
