@@ -47,7 +47,7 @@ tasks.register('buildExtension', Zip) {
     }
 
     // All files under TMS9900/ except extension.properties (already included above)
-    from('.') {
+    from('TMS9900') {
         into extName
         exclude 'extension.properties'
     }
