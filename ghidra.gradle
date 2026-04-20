@@ -19,7 +19,7 @@ version = ghidraVersion
 
 // Read extension name from extension.properties
 def extProps = new Properties()
-def extPropsFile = file("extension.properties")
+def extPropsFile = file("TMS9900/extension.properties")
 extPropsFile.withInputStream { extProps.load(it) }
 def extName = extProps.getProperty('name', 'TMS9900')
 
