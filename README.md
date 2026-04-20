@@ -28,6 +28,9 @@ This version intend is to use Ghidra as a smart disassembler.
 
 [ ] test  
 
+[ ] ghidra 12.0.4: super.getDefaultOptions(provider, loadSpec, domainObject, isLoadIntoProgram);   			     
+    reason: actual and formal argument lists differ in length
+
 
 
 ## gitlab-ci 
