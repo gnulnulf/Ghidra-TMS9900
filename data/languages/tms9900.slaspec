@@ -195,14 +195,14 @@ SREG: "*"^reg_src^"+" is reg_src & reg_ts=3  & reg_nr!=-1
 } 
 	
 # symbolic is only for R0
-SREG: "SYM@>"imm16 is reg_src & reg_ts=2 & reg_nr=0 ;imm16
+SREG: "@>"imm16 is reg_src & reg_ts=2 & reg_nr=0 ;imm16
 {
 	local tmp2:2 = imm16;
 	export tmp2;
 }
 
 # R1-R15 is indexed
-SREG: "@"simm16"("reg_src")" is reg_src & reg_ts=2 & reg_nr!=0 ;simm16
+SREG: "@>"simm16"("reg_src")" is reg_src & reg_ts=2 & reg_nr!=0 ;simm16
 {  
 	local tmp:2 = WP + 2 * reg_src ;
 	local tmp2:2 = *:2 tmp+simm16;
@@ -253,14 +253,14 @@ DREG: "@>"imm216 is reg_dst & reg_td=2  & reg_ts=2  & reg_dnr=0 ;imm16;imm216
 
 
 # R1-R15 is indexed
-DREG: "@"simm16"("reg_dst")" is reg_dst & reg_td=2 & reg_ts!=2 & reg_dnr!=0 ;simm16
+DREG: "@>"simm16"("reg_dst")" is reg_dst & reg_td=2 & reg_ts!=2 & reg_dnr!=0 ;simm16
 {
 	local tmp:2 = WP + 2 * reg_dst ;
 	local tmp2:2 = *:2 tmp+simm16;
     export *:2 tmp2;#
 }
 
-DREG: "@"simm16"("reg_dst")" is reg_dst & reg_td=2 & reg_ts=2 & reg_dnr!=0 ;imm16;simm16
+DREG: "@>"simm16"("reg_dst")" is reg_dst & reg_td=2 & reg_ts=2 & reg_dnr!=0 ;imm16;simm16
 {
 	local tmp:2 = WP + 2 * reg_dst ;
 	local tmp2:2 = *:2 tmp+simm16;
