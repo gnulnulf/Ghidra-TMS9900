@@ -55,6 +55,7 @@ define token operand (16)
     op3  = (13,15)
 	op6  = (10,15)
 	op8  = (8,15)
+	op9  = (7,15)
     op10  = (6,15)
     op11  = (5,15)
 
@@ -63,6 +64,7 @@ define token operand (16)
     mode_b   = (12,12)
     reg_td  = (10,11)
     reg_dst = (6,9) dec
+    reg_d3  = (3,6) dec
     reg_dnr = (6,9) 
     xop_dst = (6,9) dec
 	reg_ts  = (4,5)
@@ -128,6 +130,8 @@ define token jmp (16)
 #SHIFT
 define token shift (16)
 	shift_op  = (8,15)
+	shift_op9 = (7,15)
+	shift_reg_d3 = (3,6) dec
 	shift_count = (4,7)
 	shift_reg = (0,3)
 ;
@@ -153,8 +157,8 @@ define token load (16)
 
 
 
-# bind regnr to reglist
-attach names [ reg_dst reg_src iri_reg shift_reg] [
+
+attach names [ reg_dst reg_src reg_d3 iri_reg shift_reg shift_reg_d3] [
 r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15 ];
 
 #attach variables acc_4 [ A B ];
@@ -274,221 +278,460 @@ DREG: "@"simm16"("reg_dst")" is reg_dst & reg_td=2 & reg_ts=2 & reg_dnr!=0 ;imm1
 ################################################################
 
 # 3.5.1
+# A - Add word
 :A SREG","^DREG is ( op3=0x5 & mode_b=0 ) ... & SREG ... & DREG
 {
-
+    local s:2 = SREG;
+    local d:2 = DREG;
+    local result:2 = d + s;
+    local ov:2 = (s ^ ~d) & (s ^ result);
+    $(LGT) = (result != 0);
+    $(AGT) = (result s> 0);
+    $(EQ)  = (result == 0);
+    $(C)   = (result < d);
+    $(O)   = (ov >> 15) != 0;
+    DREG = result;
 }
 
+# AB - Add byte
 :AB SREG","^DREG is ( op3=0x5 & mode_b=1 ) ... & SREG ... & DREG
 {
-
+    local s:1 = SREG:1;
+    local d:1 = DREG:1;
+    local result:1 = d + s;
+    local ov:1 = (s ^ ~d) & (s ^ result);
+    $(LGT) = (result != 0);
+    $(AGT) = (result s> 0);
+    $(EQ)  = (result == 0);
+    $(C)   = (result < d);
+    $(O)   = (ov >> 7) != 0;
+    $(P)   = popcount(result) & 1;
+    DREG = zext(result);
 }
 
-:C SREG","^DREG is ( op3=0x4 & mode_b=0) ... & SREG ... & DREG
-{
-
-}
-
-:CB SREG","^DREG is ( op3=0x4 & mode_b=1 )  ... & SREG ... & DREG
-{
-
-}
-
+# S - Subtract word
 :S SREG","^DREG is ( op3=0x3 & mode_b=0 ) ... & SREG ... & DREG
 {
-
+    local s:2 = SREG;
+    local d:2 = DREG;
+    local result:2 = d - s;
+    local ov:2 = (d ^ s) & (d ^ result);
+    $(LGT) = (result != 0);
+    $(AGT) = (result s> 0);
+    $(EQ)  = (result == 0);
+    $(C)   = (d >= s);
+    $(O)   = (ov >> 15) != 0;
+    DREG = result;
 }
 
+# SB - Subtract byte
 :SB SREG","^DREG is ( op3=0x3 & mode_b=1 ) ... & SREG ... & DREG
 {
-
+    local s:1 = SREG:1;
+    local d:1 = DREG:1;
+    local result:1 = d - s;
+    local ov:1 = (d ^ s) & (d ^ result);
+    $(LGT) = (result != 0);
+    $(AGT) = (result s> 0);
+    $(EQ)  = (result == 0);
+    $(C)   = (d >= s);
+    $(O)   = (ov >> 7) != 0;
+    $(P)   = popcount(result) & 1;
+    DREG = zext(result);
 }
 
+# AI - Add immediate  (only ONE copy of this)
+:AI iri_reg^",>"^imm16 is iri_op=0x11 & iri_reg; imm16
+{
+    local reg_addr:2 = WP + (2 * iri_reg);
+    local d:2 = *:2 reg_addr;
+    local s:2 = imm16;
+    local result:2 = d + s;
+    local ov:2 = (s ^ ~d) & (s ^ result);
+    $(LGT) = (result != 0);
+    $(AGT) = (result s> 0);
+    $(EQ)  = (result == 0);
+    $(C)   = (result < d);
+    $(O)   = (ov >> 15) != 0;
+    *:2 reg_addr = result;
+}
+
+
+# C - Compare word
+:C SREG","^DREG is ( op3=0x4 & mode_b=0) ... & SREG ... & DREG
+{
+    local s:2 = SREG;
+    local d:2 = DREG;
+    $(LGT) = (d > s);
+    $(AGT) = (d s> s);
+    $(EQ)  = (d == s);
+}
+
+# CB - Compare byte
+:CB SREG","^DREG is ( op3=0x4 & mode_b=1 )  ... & SREG ... & DREG
+{
+    local s:1 = SREG:1;
+    local d:1 = DREG:1;
+    $(LGT) = (d > s);
+    $(AGT) = (d s> s);
+    $(EQ)  = (d == s);
+    $(P)   = popcount(d) & 1;
+}
+
+
+# SOC - Set ones corresponding word
 :SOC SREG","^DREG is ( op3=0x7 & mode_b=0 ) ... & SREG ... & DREG
 {
-
+    local result:2 = DREG | SREG;
+    $(LGT) = (result != 0);
+    $(AGT) = (result s> 0);
+    $(EQ)  = (result == 0);
+    DREG = result;
 }
 
+# SOCB - Set ones corresponding byte
 :SOCB SREG","^DREG is ( op3=0x7 & mode_b=1 ) ... & SREG ... & DREG
 {
-
+    local result:1 = DREG:1 | SREG:1;
+    $(LGT) = (result != 0);
+    $(AGT) = (result s> 0);
+    $(EQ)  = (result == 0);
+    $(P)   = popcount(result) & 1;
+    DREG = zext(result);
 }
 
+# SZC - Set zeros corresponding word
 :SZC SREG","^DREG is ( op3=0x2 & mode_b=0)  ... & SREG ... & DREG
 {
-
+    local result:2 = DREG & ~SREG;
+    $(LGT) = (result != 0);
+    $(AGT) = (result s> 0);
+    $(EQ)  = (result == 0);
+    DREG = result;
 }
 
+# SZCB - Set zeros corresponding byte
 :SZCB SREG","^DREG is ( op3=0x2 & mode_b=1 )  ... & SREG ... & DREG
 {
-
+    local result:1 = DREG:1 & ~SREG:1;
+    $(LGT) = (result != 0);
+    $(AGT) = (result s> 0);
+    $(EQ)  = (result == 0);
+    $(P)   = popcount(result) & 1;
+    DREG = zext(result);
 }
 
+# MOV - Move word
 :MOV SREG","^DREG is ( op3=0x6 & mode_b=0 ) ... & SREG ... & DREG
 {
-SREG=DREG;
+    local tmp:2 = SREG;
+    $(LGT) = (tmp != 0);
+    $(AGT) = (tmp s> 0);
+    $(EQ)  = (tmp == 0);
+    DREG = tmp;
 }
 
-
+# MOVB - Move byte
 :MOVB SREG^","^DREG is ( op3=0x6 & mode_b=1) ... & SREG ... & DREG
 {
-SREG=DREG;
+    local tmp:1 = SREG:1;       # Take high byte of source
+    $(LGT) = (tmp != 0);
+    $(AGT) = (tmp s> 0);
+    $(EQ)  = (tmp == 0);
+    $(P)   = popcount(tmp) & 1; # Parity bit
+    DREG = zext(tmp);
 }
+
 # 3.5.2
-:COC SREG","^reg_dst is ( op6=0x8 & reg_dst ) ... & SREG 
+# COC - Compare Ones Corresponding
+:COC SREG","^reg_dst is ( op6=0x8 & reg_dst ) ... & SREG
 {
-
+    local s:2 = SREG;
+    local reg_addr:2 = WP + (2 * reg_dst);
+    local d:2 = *:2 reg_addr;
+    local result:2 = s & d;
+    $(EQ) = (result == s);
 }
 
-:CZC SREG","^reg_dst is ( op6=0x9 & reg_dst ) ... & SREG 
+# CZC - Compare Zeros Corresponding
+:CZC SREG","^reg_dst is ( op6=0x9 & reg_dst ) ... & SREG
 {
-
+    local s:2 = SREG;
+    local reg_addr:2 = WP + (2 * reg_dst);
+    local d:2 = *:2 reg_addr;
+    local result:2 = s & d;
+    $(EQ) = (result == 0);
 }
 
-:XOR SREG","^reg_dst is ( op6=0xa & reg_dst ) ... & SREG 
+# XOR - Exclusive Or
+:XOR SREG","^reg_dst is ( op6=0xa & reg_dst ) ... & SREG
 {
-
+    local s:2 = SREG;
+    local reg_addr:2 = WP + (2 * reg_dst);
+    local d:2 = *:2 reg_addr;
+    local result:2 = s ^ d;
+    $(LGT) = (result != 0);
+    $(AGT) = (result s> 0);
+    $(EQ)  = (result == 0);
+    *:2 reg_addr = result;
 }
 
-:MPY SREG","^reg_dst is ( op6=0xe & reg_dst ) ... & SREG 
+# MPY - Multiply unsigned, result is 32-bit in reg_dst:reg_dst+1
+:MPY SREG","^reg_dst is ( op6=0xe & reg_dst ) ... & SREG
 {
-
+    local s:2 = SREG;
+    local reg_addr:2 = WP + (2 * reg_dst);
+    local d:2 = *:2 reg_addr;
+    local result:4 = zext(d) * zext(s);
+    *:2 reg_addr = result(2);
+    *:2 (reg_addr + 2) = result:2;
 }
 
-:DIV SREG","^reg_dst is ( op6=0xf & reg_dst ) ... & SREG 
+# DIV - Divide unsigned, dividend is 32-bit in reg_dst:reg_dst+1
+:DIV SREG","^reg_dst is ( op6=0xf & reg_dst ) ... & SREG
 {
-
-}
-
-# xop(reg,index)
-define pcodeop xop;
-
-macro mxop(reg,wpvec,pcvec){
-
+    local s:2 = SREG;
+    local reg_addr:2 = WP + (2 * reg_dst);
+    local dhi:2 = *:2 reg_addr;
+    local dlo:2 = *:2 (reg_addr + 2);
+    local dividend:4 = (zext(dhi) << 16) | zext(dlo);
+    local divisor:4 = zext(s);
+    local quotient:4 = dividend / divisor;
+    local remainder:4 = dividend % divisor;
+    # OV set if quotient overflows 16 bits
+    $(O) = (quotient > 0xFFFF);
+    *:2 reg_addr = quotient:2;
+    *:2 (reg_addr + 2) = remainder:2;
 }
 
 # 3.5.3
-:XOP SREG^","^reg_dnr is ( op6=0xb & reg_dnr  ) ...  & SREG 
+:XOP SREG^","^reg_dnr is ( op6=0xb & reg_dnr ) ... & SREG
 {
-  # Pseudocode:
-  #   R13_new <- R13_current
-  #   R14_new <- R14_current
-  #   R15_new <- R15_current
-  #   R11_new <- effective address of src
-  #   PC,WP loaded from jump table at >0040 + 4*opnum
-  #   Mask set, bit 6 in Status Register set
-	local tmpwp:2 = 0x40 + 4* reg_dnr;
-	local tmppc:2 = 0x42 + 4* reg_dnr;
-	local tmpwp2:2=*tmpwp;
-	local tmppc2:2=*tmppc;
-	local newwp:2=*tmpwp;
-	local newpc:2=*tmppc;
-	xop(SREG,newwp,newpc);
-	PC=newpc;
-	#call newpc;
+    # Get new WP from XOP vector table (base 0x0040)
+    local vec_base:2 = 0x0040 + (2 * reg_dnr);
+    local new_wp:2 = *:2 vec_base;
+    local new_pc:2 = *:2 (vec_base + 2);
 
+    # Save context into new workspace
+    *:2 (new_wp + 22) = SREG;   # R11 = src operand address
+    *:2 (new_wp + 26) = WP;     # R13 = old WP
+    *:2 (new_wp + 28) = inst_next;  # R14 = return PC
+    *:2 (new_wp + 30) = ST;     # R15 = old ST
 
-
-#	local oldwp:2 = WP;
-# 	local newwp:2 = 40 + 4* reg_dnr;
-# 	local newpc:2 = 42 + 4* reg_dnr;
-# 	WP=newwp;
-# 	#r13=oldWP
-# 	#r14=oldPC
-# 	#r15=oldST
-#	call[newpc];
-#/   #export *:2 tmp2;
+    # Switch context
+    WP = new_wp;
+    ST[13,1] = 1;               # Set X flag
+    call [new_pc];
 }
-
-#:XOP ">@"imm16^","^reg_dst is ( op6=0xb & reg_dst & reg_ts=0 ) ...  & SREG ;imm16
-#{#
-#
-#}
-
 
 # 3.5.4
+# B - Branch, simple jump to address in source operand
 :B SREG is op10=0x11 ... & SREG 
 {
-	goto SREG;
-
+    local target:2 = SREG;
+    goto [target];
 }
+
+# BL - Branch and Link, saves return address in R11
 :BL SREG is op10=0x1a ... & SREG 
 {
-
+    # Save return address (next instruction) into workspace R11
+    local r11_addr:2 = WP + 22;    # R11 = WP + (11 * 2)
+    *:2 r11_addr = inst_next;
+    
+    local target:2 = SREG;
+    call [target];
 }
+
+# BLWP - Branch and Link with Workspace Pointer
+# Performs a full context switch using a vector address
 :BLWP SREG is op10=0x10 ... & SREG 
 {
-
+    # Read vector address from source operand
+    local vector:2 = SREG;
+    
+    # Read new WP and PC from vector table
+    local new_wp:2 = *:2 vector;
+    local new_pc:2 = *:2 (vector + 2);
+    
+    # Save context into NEW workspace registers R13, R14, R15
+    local r13_addr:2 = new_wp + 26;   # R13 = new_WP + (13 * 2)
+    local r14_addr:2 = new_wp + 28;   # R14 = new_WP + (14 * 2)
+    local r15_addr:2 = new_wp + 30;   # R15 = new_WP + (15 * 2)
+    
+    *:2 r13_addr = WP;          # Save old WP in new R13
+    *:2 r14_addr = inst_next;   # Save return PC in new R14
+    *:2 r15_addr = ST;          # Save old ST in new R15
+    
+    # Switch workspace
+    WP = new_wp;
+    
+    call [new_pc];
 }
+
+# CLR - Clear operand (set to 0)
 :CLR SREG is op10=0x13 ... & SREG 
 {
- SREG=0;
+    SREG = 0;
 }
+
+# SETO - Set operand to all ones (0xFFFF)
 :SETO SREG is op10=0x1c ... & SREG 
 {
-
+    SREG = 0xFFFF;
 }
+
+# INV - Invert all bits
 :INV SREG is op10=0x15 ... & SREG 
 {
-
+    local tmp:2 = ~SREG;
+    # Set status bits
+    $(LGT) = (tmp != 0);
+    $(AGT) = (tmp s> 0);
+    $(EQ)  = (tmp == 0);
+    SREG = tmp;
 }
+
+# NEG - Negate (two's complement)
 :NEG SREG is op10=0x14 ... & SREG 
 {
-
+    local tmp:2 = -SREG;
+    # Set status bits
+    $(LGT) = (tmp != 0);
+    $(AGT) = (tmp s> 0);
+    $(EQ)  = (tmp == 0);
+    $(C)   = (SREG != 0);
+    $(O)   = (SREG == 0x8000);
+    SREG = tmp;
 }
+
+# ABS - Absolute value
 :ABS SREG is op10=0x1d ... & SREG 
 {
-
+    local tmp:2 = SREG;
+    local result:2;
+    $(O) = (tmp == 0x8000);
+    if (tmp s>= 0) goto <positive>;
+        result = -tmp;
+        goto <done>;
+    <positive>
+        result = tmp;
+    <done>
+    $(LGT) = (result != 0);
+    $(AGT) = (result s> 0);
+    $(EQ)  = (result == 0);
+    $(C)   = 0;
+    SREG = result;
 }
+
+# SWPB - Swap bytes
 :SWPB SREG is op10=0x1b ... & SREG 
 {
-
+    local tmp:2 = SREG;
+    local hi:1 = tmp(1);    # high byte
+    local lo:1 = tmp:1;     # low byte
+    local result:2 = (zext(lo) << 8) | zext(hi);
+    SREG = result;
 }
+
+# INC - Increment by 1
 :INC SREG is op10=0x16 ... & SREG 
 {
-
+    local tmp:2 = SREG + 1;
+    $(LGT) = (tmp != 0);
+    $(AGT) = (tmp s> 0);
+    $(EQ)  = (tmp == 0);
+    $(C)   = (tmp == 0);           # carry if wrapped around
+    $(O)   = (SREG == 0x7FFF);    # overflow if was max positive
+    SREG = tmp;
 }
+
+# INCT - Increment by 2
 :INCT SREG is op10=0x17 ... & SREG 
 {
-
+    local tmp:2 = SREG + 2;
+    $(LGT) = (tmp != 0);
+    $(AGT) = (tmp s> 0);
+    $(EQ)  = (tmp == 0);
+    $(C)   = (tmp <  2);           # carry if wrapped around
+    $(O)   = (SREG == 0x7FFF) || (SREG == 0x7FFE);
+    SREG = tmp;
 }
+
+# DEC - Decrement by 1
 :DEC SREG is op10=0x18 ... & SREG 
 {
-
+    local tmp:2 = SREG - 1;
+    $(LGT) = (tmp != 0);
+    $(AGT) = (tmp s> 0);
+    $(EQ)  = (tmp == 0);
+    $(C)   = (SREG != 0);         # carry if no borrow
+    $(O)   = (SREG == 0x8000);   # overflow if was min negative
+    SREG = tmp;
 }
+
+# DECT - Decrement by 2
 :DECT SREG is op10=0x19 ... & SREG 
 {
-
+    local tmp:2 = SREG - 2;
+    $(LGT) = (tmp != 0);
+    $(AGT) = (tmp s> 0);
+    $(EQ)  = (tmp == 0);
+    $(C)   = (SREG > 1);          # carry if no borrow
+    $(O)   = (SREG == 0x8000) || (SREG == 0x8001);
+    SREG = tmp;
 }
+
+# X - Execute instruction at source address
 :X SREG is op10=0x12 ... & SREG 
 {
-
+    # X executes the instruction at the source address
+    # This is difficult to model statically, treated as indirect call
+    local target:2 = SREG;
+    call [target];
 }
-
 
 
 # 3.5.5 CRU multi
-:LDCR SREG^","^crum_c is ( crum_op=0xc & crum_c ) ... & SREG 
+:LDCR SREG^","^crum_c is ( crum_op=0xc & crum_c ) ... & SREG
 {
-
+    # Transfer crum_c bits from SREG to CRU - CRU bus not modeled
+    local s:2 = SREG;
+    s = s;
 }
-:STCR SREG^","^crum_c is ( crum_op=0xd & crum_c ) ... & SREG 
-{
 
+:STCR SREG^","^crum_c is ( crum_op=0xd & crum_c ) ... & SREG
+{
+    # Transfer crum_c bits from CRU into SREG destination
+    # CRU bus not modeled
+    local cru_base:2 = *:2 (WP + 24);  # R12
+    local addr:2 = cru_base >> 1;
+    addr = addr;  # suppress unused warning
 }
 
 # 3.5.6 CRU single bit
 :SBO crus_sdis is crus_op=0x1d & crus_sdis
 {
-
+    # Set CRU bit to 1 - CRU not modeled
+    local cru_base:2 = *:2 (WP + 24);  # R12
+    local addr:2 = (cru_base >> 1) + crus_sdis;
+    addr = addr;
 }
+
 :SBZ crus_sdis is crus_op=0x1e & crus_sdis
 {
-
+    # Set CRU bit to 0 - CRU not modeled
+    local cru_base:2 = *:2 (WP + 24);  # R12
+    local addr:2 = (cru_base >> 1) + crus_sdis;
+    addr = addr;
 }
+
 :TB crus_sdis is crus_op=0x1f & crus_sdis
 {
-
+    # Test CRU bit - result in EQ - CRU not modeled
+    local cru_base:2 = *:2 (WP + 24);  # R12
+    local addr:2 = (cru_base >> 1) + crus_sdis;
+    $(EQ) = addr != addr;  # unknown - model as 0
 }
 
 # 3.5.7
@@ -553,100 +796,217 @@ macro mxop(reg,wpvec,pcvec){
 
 
 # 3.5.8
-:SLA shift_reg^","^shift_count is shift_op=0x0a  & shift_reg & shift_count
+# SLA - Shift Left Arithmetic
+:SLA shift_reg^","^shift_count is shift_op=0x0a & shift_reg & shift_count
 {
-
-}
-:SRA shift_reg^","^shift_count is shift_op=0x08  & shift_reg & shift_count
-{
-
-}
-:SRC shift_reg^","^shift_count is shift_op=0x0b  & shift_reg & shift_count
-{
-
-}
-:SRL shift_reg^","^shift_count is shift_op=0x09  & shift_reg & shift_count
-{
-
-}
-# 3.5.9 Immediate register instructions
-:AI iri_reg^",>"^imm16 is  iri_op=0x11 & iri_reg; imm16
-{
-	
-}
-
-:ANDI iri_reg^",>"^imm16 is  iri_op=0x12 & iri_reg; imm16
-{
-	
-}
-
-:CI iri_reg^",>"^imm16 is  iri_op=0x14 & iri_reg; imm16
-{
-	
+    local reg_addr:2 = WP + (2 * shift_reg);
+    local d:2 = *:2 reg_addr;
+    local count:2 = shift_count;
+    # if count==0, use R0 & 0xF, if still 0 then 16
+    if (count != 0) goto <do_shift>;
+    count = *:2 WP & 0xF;
+    if (count != 0) goto <do_shift>;
+    count = 16;
+    local result:2;
+    local last_bit:2;
+    local msb_before:2;
+    local msb_after:2;
+    <do_shift>
+    result = d << count;
+    last_bit = (d << (count - 1)) >> 15;
+    $(C)   = (last_bit != 0);
+    $(LGT) = (result != 0);
+    $(AGT) = (result s> 0);
+    $(EQ)  = (result == 0);
+    msb_before = (d >> 15) & 1;
+    msb_after = (result >> 15) & 1;
+    $(O) = (msb_before != msb_after);
+    *:2 reg_addr = result;
 }
 
-:LI iri_reg^",>"^imm16 is  iri_op=0x10 & iri_reg; imm16
+# SRA - Shift Right Arithmetic (signed)
+:SRA shift_reg^","^shift_count is shift_op=0x08 & shift_reg & shift_count
 {
-	
+    local reg_addr:2 = WP + (2 * shift_reg);
+    local d:2 = *:2 reg_addr;
+    local count:2 = shift_count;
+    if (count != 0) goto <do_shift>;
+    count = *:2 WP & 0xF;
+    if (count != 0) goto <do_shift>;
+    count = 16;
+    local last_bit:2;
+    local result:2;
+    <do_shift>
+    last_bit = (d >> (count - 1)) & 1;
+    result = d s>> count;
+    $(C)   = (last_bit != 0);
+    $(LGT) = (result != 0);
+    $(AGT) = (result s> 0);
+    $(EQ)  = (result == 0);
+    *:2 reg_addr = result;
 }
 
-:ORI iri_reg^",>"^imm16 is  iri_op=0x13 & iri_reg; imm16
+# SRC - Shift Right Circular
+:SRC shift_reg^","^shift_count is shift_op=0x0b & shift_reg & shift_count
 {
-	
+    local reg_addr:2 = WP + (2 * shift_reg);
+    local d:2 = *:2 reg_addr;
+    local count:2 = shift_count;
+    if (count != 0) goto <do_shift>;
+    count = *:2 WP & 0xF;
+    if (count != 0) goto <do_shift>;
+    count = 16;
+    local result:2;
+    local last_bit:2;
+    <do_shift>
+    result = (d >> count) | (d << (16 - count));
+    last_bit = (result >> 15) & 1;
+    $(C)   = (last_bit != 0);
+    $(LGT) = (result != 0);
+    $(AGT) = (result s> 0);
+    $(EQ)  = (result == 0);
+    *:2 reg_addr = result;
 }
 
-# 3.5.10 internal register load immediate
-define pcodeop lwpi_set_wp;
+# SRL - Shift Right Logical
+:SRL shift_reg^","^shift_count is shift_op=0x09 & shift_reg & shift_count
+{
+    local reg_addr:2 = WP + (2 * shift_reg);
+    local d:2 = *:2 reg_addr;
+    local count:2 = shift_count;
+    if (count != 0) goto <do_shift>;
+    count = *:2 WP & 0xF;
+    if (count != 0) goto <do_shift>;
+    count = 16;
+    local last_bit:2;
+    local result:2;
+    <do_shift>
+    last_bit = (d >> (count - 1)) & 1;
+    result = d >> count;
+    $(C)   = (last_bit != 0);
+    $(LGT) = (result != 0);
+    $(AGT) = (result s> 0);
+    $(EQ)  = (result == 0);
+    *:2 reg_addr = result;
+}
 
+# 3.5.9
+# LI - Load immediate
+:LI iri_reg^",>"^imm16 is iri_op=0x10 & iri_reg; imm16
+{
+    local tmp:2 = imm16;
+    local reg_addr:2 = WP + (2 * iri_reg);
+    $(LGT) = (tmp != 0);
+    $(AGT) = (tmp s> 0);
+    $(EQ)  = (tmp == 0);
+    *:2 reg_addr = tmp;
+}
+
+# ANDI - And immediate
+:ANDI iri_reg^",>"^imm16 is iri_op=0x12 & iri_reg; imm16
+{
+    local reg_addr:2 = WP + (2 * iri_reg);
+    local result:2 = *:2 reg_addr & imm16;
+    $(LGT) = (result != 0);
+    $(AGT) = (result s> 0);
+    $(EQ)  = (result == 0);
+    *:2 reg_addr = result;
+}
+
+# ORI - Or immediate
+:ORI iri_reg^",>"^imm16 is iri_op=0x13 & iri_reg; imm16
+{
+    local reg_addr:2 = WP + (2 * iri_reg);
+    local result:2 = *:2 reg_addr | imm16;
+    $(LGT) = (result != 0);
+    $(AGT) = (result s> 0);
+    $(EQ)  = (result == 0);
+    *:2 reg_addr = result;
+}
+
+# CI - Compare immediate
+:CI iri_reg^",>"^imm16 is iri_op=0x14 & iri_reg; imm16
+{
+    local reg_addr:2 = WP + (2 * iri_reg);
+    local d:2 = *:2 reg_addr;
+    local s:2 = imm16;
+    $(LGT) = (d > s);
+    $(AGT) = (d s> s);
+    $(EQ)  = (d == s);
+}
+
+# 3.5.10
+# LWPI - Load workspace pointer immediate
 :LWPI ">"^imm16 is load_op=0x17; imm16
 {
-  WP=imm16;
+    WP = imm16;
 }
 
-define pcodeop limi_load_interrupt_mask;
-
+# LIMI - Load interrupt mask immediate
 :LIMI ">"^imm16 is load_op=0x18; imm16
 {
-	local tmp:2=imm16;
-	limi_load_interrupt_mask(tmp);
+    $(IM) = imm16 & 0xF;
 }
 
-# 3.5.11 internal register store
-:STST reg_dst is op11=0x16  & reg_dst
+# 3.5.11
+# STST - Store status register
+:STST reg_src is op11=0x016 & reg_src
 {
-
+    local reg_addr:2 = WP + (2 * reg_src);
+    *:2 reg_addr = ST;
 }
-:STWP reg_dst is op11=0x15  & reg_dst
-{
 
+# STWP - Store workspace pointer
+:STWP reg_src is op11=0x015 & reg_src
+{
+    local reg_addr:2 = WP + (2 * reg_src);
+    *:2 reg_addr = WP;
 }
 
 # 3.5.12
+# RTWP - Return with Workspace Pointer restore
 :RTWP is op11=0x1c
 {
-
+    # Restore context from current R13, R14, R15
+    local r13_addr:2 = WP + 26;   # R13 = WP + (13 * 2)
+    local r14_addr:2 = WP + 28;   # R14 = WP + (14 * 2)
+    local r15_addr:2 = WP + 30;   # R15 = WP + (15 * 2)
+    
+    WP = *:2 r13_addr;            # Restore old WP
+    ST = *:2 r15_addr;            # Restore old ST
+    
+    local ret_addr:2 = *:2 r14_addr;  # Get return PC
+    return [ret_addr];
 }
+
+
 
 
 
 # 3.5.13
+# 3.5.13
 :IDLE is op11=0x1a
 {
-
+    # Halt CPU until interrupt - modeled as nop for static analysis
 }
+
 :RSET is op11=0x1b
 {
-
+    # Reset - clear ST bits 0-11
+    ST = ST & 0xF000;
 }
+
 :CKOF is op11=0x1e
 {
-
+    # Clock off - no meaningful pcode model
 }
+
 :CKON is op11=0x1d
 {
-
+    # Clock on - no meaningful pcode model
 }
+
 :LREX is op11=0x1f
 {
-
+    # Load and restart execution - no meaningful pcode model
 }

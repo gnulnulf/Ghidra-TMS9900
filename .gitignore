@@ -9,6 +9,12 @@ dist/
 
 *.sla
 
+# Gradle wrapper (generated, not committed)
+gradlew
+gradlew.bat
+gradle/
+
+
 #/bin/
 #/lib/
 
