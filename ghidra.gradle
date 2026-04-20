@@ -1,0 +1,62 @@
+// Ghidra extension build helper script.
+// Based on the standard Ghidra extension gradle support file.
+
+apply plugin: 'base'
+
+def ghidraDir = ext.ghidraInstallDir
+
+// Read version info from Ghidra installation
+def ghidraProps = new Properties()
+def appProps = new File("${ghidraDir}/Ghidra/application.properties")
+if (appProps.exists()) {
+    appProps.withInputStream { ghidraProps.load(it) }
+}
+
+def ghidraVersion = ghidraProps.getProperty('application.version', 'unknown')
+def ghidraReleaseName = ghidraProps.getProperty('application.release.name', 'unknown')
+
+version = ghidraVersion
+
+// Read extension name from extension.properties
+def extProps = new Properties()
+def extPropsFile = file("extension.properties")
+extPropsFile.withInputStream { extProps.load(it) }
+def extName = extProps.getProperty('name', 'TMS9900')
+
+tasks.register('buildExtension', Zip) {
+    group = 'Ghidra Extension'
+    description = 'Builds a distributable Ghidra extension zip.'
+
+    // Replace @extversion@ token in extension.properties
+    def filteredProps = file("${buildDir}/extension.properties")
+
+    doFirst {
+        mkdir buildDir
+        filteredProps.text = extPropsFile.text
+            .replace('@extversion@', ghidraVersion)
+    }
+
+    archiveBaseName = extName
+    archiveVersion  = ghidraVersion
+    archiveExtension = 'zip'
+    destinationDirectory = file('dist')
+
+    // Extension properties (token-replaced)
+    from(filteredProps) {
+        into extName
+    }
+
+    // All files under TMS9900/ except extension.properties (already included above)
+    from('.') {
+        into extName
+        exclude 'extension.properties'
+    }
+
+    doLast {
+        println "Built: dist/${archiveFileName.get()}"
+        println "Ghidra version: ${ghidraVersion} (${ghidraReleaseName})"
+        println "Install via: Ghidra > File > Install Extensions"
+    }
+}
+
+defaultTasks 'buildExtension'
