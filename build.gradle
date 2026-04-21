@@ -1,27 +1,27 @@
-plugins {
-    id 'java'
-}
+// plugins {
+//     id 'java'
+// }
 
-group = 'com.example'
-version = '1.0.0'
+// group = 'com.example'
+// version = '1.0.0'
 
-repositories {
-    mavenCentral()
-}
+// repositories {
+//     mavenCentral()
+// }
 
-sourceCompatibility = '11'
-targetCompatibility = '11'
+// sourceCompatibility = '11'
+// targetCompatibility = '11'
 
-jar {
-    manifest {
-        attributes(
-            'Ghidra-Module': 'TMS9900Loader',
-            'Ghidra-Module-Version': version,
-            'Built-By': System.getProperty('user.name'),
-            'Created-By': "Gradle"
-        )
-    }
-}
+// jar {
+//     manifest {
+//         attributes(
+//             'Ghidra-Module': 'TMS9900Loader',
+//             'Ghidra-Module-Version': version,
+//             'Built-By': System.getProperty('user.name'),
+//             'Created-By': "Gradle"
+//         )
+//     }
+// }
 
 /* ###
  * IP: GHIDRA
@@ -126,22 +126,22 @@ task compileSleigh(type: JavaExec) {
     dependsOn(copySleighSources)
 }
 
-tasks.named('buildExtension') {
-    from('build/data') {
-        into "$project.name/data"
-    }
+// tasks.named('buildExtension') {
+//     from('build/data') {
+//         into "$project.name/data"
+//     }
 
-    dependsOn('compileSleigh')
-}
+//     dependsOn('compileSleigh')
+// }
 
-tasks.named('test') {
-    useJUnitPlatform()
+// tasks.named('test') {
+//     useJUnitPlatform()
 
-    // The tests are dependent on the compiled language files.
-    inputs.files(fileTree('build/data/languages').include('*.sla'))
+//     // The tests are dependent on the compiled language files.
+//     inputs.files(fileTree('build/data/languages').include('*.sla'))
 
-    dependsOn(compileSleigh)
-}
+//     dependsOn(compileSleigh)
+// }
 
 tasks.withType(JavaCompile) {
     options.deprecation = true
