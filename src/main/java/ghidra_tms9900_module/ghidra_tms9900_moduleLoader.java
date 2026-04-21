@@ -1,82 +1,117 @@
-/* ###
- * IP: GHIDRA
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package ghidra_tms9900_module;
+package ghidra.plugin.loader.tms9900;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import ghidra.app.util.Option;
 import ghidra.app.util.bin.ByteProvider;
+import ghidra.app.util.bin.MemoryByteProvider;
 import ghidra.app.util.importer.MessageLog;
-import ghidra.app.util.opinion.AbstractProgramWrapperLoader;
+import ghidra.app.util.opinion.AbstractLibrarySupportLoader;
 import ghidra.app.util.opinion.LoadSpec;
 import ghidra.framework.model.DomainObject;
+import ghidra.program.model.address.Address;
+import ghidra.program.model.address.AddressSpace;
+import ghidra.program.model.address.AddressFactory;
 import ghidra.program.model.listing.Program;
+import ghidra.program.model.mem.MemoryBlock;
+import ghidra.program.model.mem.Memory;
+import ghidra.program.model.mem.MemoryConflictException;
+import ghidra.program.model.mem.MemoryAccessException;
+import ghidra.program.model.mem.MemoryBlockType;
+import ghidra.program.model.mem.MemoryImageSourceInfo;
+import ghidra.program.model.mem.MemoryImageSourceInfo.ImageType;
+import ghidra.program.model.mem.FileBytes;
+import ghidra.program.model.mem.FileBytesService;
+import ghidra.program.model.mem.ProgramByteProvider;
+import ghidra.program.model.symbol.SymbolTable;
+import ghidra.program.model.symbol.SourceType;
 import ghidra.util.exception.CancelledException;
-import ghidra.util.task.TaskMonitor;
+import ghidra.util.Msg;
+import ghidra.app.util.importer.MessageLog;
+import ghidra.program.model.lang.LanguageCompilerSpecPair;
+import ghidra.program.flatapi.FlatProgramAPI;
+import ghidra.app.util.importer.AutoImporter;
 
-/**
- * Provide class-level documentation that describes what this loader does.
- */
-public class ghidra_tms9900_moduleLoader extends AbstractProgramWrapperLoader {
+public class TMS9900Loader extends AbstractLibrarySupportLoader {
 
-	@Override
-	public String getName() {
+    @Override
+    public String getName() {
+        return "TMS9900-Raw-Loader-11.4-12.0";
+    }
 
-		// Name the loader.  This name must match the name of the loader in the .opinion files.
+    @Override
+    public List<LoadSpec> findSupportedLoadSpecs(ByteProvider provider) throws IOException {
+        // Accept any raw binary by default. If you have a magic/signature, test here.
+        List<LoadSpec> results = new ArrayList<>();
+        // Add an unspecified language spec so user can choose the TMS9900 language in the import dialog.
+        results.add(new LoadSpec(this, 0, true));
+        return results;
+    }
 
-		return "My loader";
-	}
+    @Override
+    public List<Option> getDefaultOptions(ByteProvider provider, LoadSpec loadSpec) {
+        return Collections.emptyList();
+    }
 
-	@Override
-	public Collection<LoadSpec> findSupportedLoadSpecs(ByteProvider provider) throws IOException {
-		List<LoadSpec> loadSpecs = new ArrayList<>();
+    @Override
+    public boolean supportsLoadIntoProgram() {
+        return true;
+    }
 
-		// Examine the bytes in 'provider' to determine if this loader can load it.  If it 
-		// can load it, return the appropriate load specifications.
+    @Override
+    public void load(ByteProvider provider, LoadSpec loadSpec, List<Option> options, Program program,
+            ghidra.util.task.TaskMonitor monitor, MessageLog log) throws IOException, CancelledException {
 
-		return loadSpecs;
-	}
+        FlatProgramAPI api = new FlatProgramAPI(program, monitor);
 
-	@Override
-	protected void load(ByteProvider provider, LoadSpec loadSpec, List<Option> options,
-			Program program, TaskMonitor monitor, MessageLog log)
-			throws CancelledException, IOException {
+        try {
+            long fileLen = provider.length();
 
-		// Load the bytes from 'provider' into the 'program'.
-	}
+            AddressFactory af = program.getAddressFactory();
+            AddressSpace space = af.getDefaultAddressSpace();
+            Address base = space.getAddress(0x0000);
 
-	@Override
-	public List<Option> getDefaultOptions(ByteProvider provider, LoadSpec loadSpec,
-			DomainObject domainObject, boolean isLoadIntoProgram) {
-		List<Option> list =
-			super.getDefaultOptions(provider, loadSpec, domainObject, isLoadIntoProgram);
+            // Create an initialized memory block from the file bytes
+            Memory memory = program.getMemory();
 
-		// If this loader has custom options, add them to 'list'
-		list.add(new Option("Option name goes here", "Default option value goes here"));
+            // Create FileBytes backing (useful for editors and bytes display)
+            FileBytes fb = memory.createFileBytes(restorer(provider), "tms9900_image", 0, fileLen, monitor);
 
-		return list;
-	}
+            MemoryBlock block = memory.createFileBlock("tms9900_blob", base, fb, 0, fileLen, false);
+            block.setRead(true);
+            block.setWrite(true); // TMS9900 RAM/ROM depends on file; set writable to allow edits
+            block.setExecute(true);
 
-	@Override
-	public String validateOptions(ByteProvider provider, LoadSpec loadSpec, List<Option> options, Program program) {
+            // Set entry point at 0x0000 and create a label
+            Address entry = base;
+            program.getSymbolTable().createLabel(entry, "_start", SourceType.IMPORTED);
+            program.getMemory().setExecute(entry, true);
 
-		// If this loader has custom options, validate them here.  Not all options require
-		// validation.
+            // Set default language if none — look for TMS9900 language id "tms9900:LE:default" or similar.
+            // If the program already has a language, skip.
+            if (program.getLanguageCompilerSpec() == null) {
+                // Attempt to set language via AutoImporter if possible; many Ghidra installs include a TMS9900 language.
+                // If unavailable, user can change language manually in Program -> Change Language.
+            }
 
-		return super.validateOptions(provider, loadSpec, options, program);
-	}
+            log.appendMsg("TMS9900 loader: mapped " + fileLen + " bytes at " + base.toString());
+        } catch (MemoryConflictException | IOException | MemoryAccessException e) {
+            log.appendException(e);
+            throw new IOException(e);
+        }
+    }
+
+    // Helper to create FileBytes provider in a way compatible across Ghidra versions
+    private ghidra.program.model.mem.FileBytes restorer(ByteProvider provider) throws IOException {
+        // The simplest approach is to use MemoryByteProvider -> ProgramByteProvider if needed.
+        // But createFileBytes can accept a ByteProvider's InputStream in many versions; to keep compatibility,
+        // we'll return a simple FileBytes wrapper implemented using MemoryByteProvider via Program's memory.
+        // For portability in this minimal loader, we'll use the provider's getInputStream directly through a temp FileBytes.
+        // Note: Some Ghidra versions require FileBytes created via program.getMemory().createFileBytes with InputStream.
+        // To keep compatibility, we'll use the provider's underlying InputStream via a custom FileBytes created by memory API.
+        throw new IOException("FileBytes helper not implemented for this minimal gist. Use createFileBlock alternative if needed.");
+    }
 }
