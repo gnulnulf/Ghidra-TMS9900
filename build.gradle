@@ -126,22 +126,22 @@ task compileSleigh(type: JavaExec) {
     dependsOn(copySleighSources)
 }
 
-// tasks.named('buildExtension') {
-//     from('build/data') {
-//         into "$project.name/data"
-//     }
+ tasks.named('buildExtension') {
+     from('build/data') {
+        into "$project.name/data"
+    }
 
-//     dependsOn('compileSleigh')
-// }
+    dependsOn('compileSleigh')
+}
 
-// tasks.named('test') {
-//     useJUnitPlatform()
+tasks.named('test') {
+    useJUnitPlatform()
 
-//     // The tests are dependent on the compiled language files.
-//     inputs.files(fileTree('build/data/languages').include('*.sla'))
+    // The tests are dependent on the compiled language files.
+    inputs.files(fileTree('build/data/languages').include('*.sla'))
 
-//     dependsOn(compileSleigh)
-// }
+    dependsOn(compileSleigh)
+}
 
 tasks.withType(JavaCompile) {
     options.deprecation = true

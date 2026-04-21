@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<processor_spec>
-  <programcounter register="PC"/>
-  <default_symbols>
-    <symbol name="RESET_WP" address="0x0000" entry="true" type="code_ptr"/>
-    <symbol name="RESET_PC" address="0x0002" entry="true" type="code_ptr"/>
-  </default_symbols>
-</processor_spec>
