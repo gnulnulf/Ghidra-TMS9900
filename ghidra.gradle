@@ -1,6 +1,18 @@
 // Ghidra extension build helper script.
 // Based on the standard Ghidra extension gradle support file.
 
+def ghidraInstallDir
+
+if (System.env.GHIDRA_INSTALL_DIR) {
+	ghidraInstallDir = System.env.GHIDRA_INSTALL_DIR
+}
+else if (project.hasProperty("GHIDRA_INSTALL_DIR")) {
+	ghidraInstallDir = project.getProperty("GHIDRA_INSTALL_DIR")
+}
+else {
+	ghidraInstallDir = "<REPLACE>"
+}
+
 apply plugin: 'base'
 
 def ghidraDir = ext.ghidraInstallDir
